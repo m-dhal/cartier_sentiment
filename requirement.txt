@@ -70,8 +70,7 @@ jupyter_client @ file:///home/conda/feedstock_root/build_artifacts/jupyter_clien
 jupyter_core @ file:///Users/runner/miniforge3/conda-bld/jupyter_core_1666827680682/work
 jupyterlab-pygments @ file:///home/conda/feedstock_root/build_artifacts/jupyterlab_pygments_1649936611996/work
 jupyterlab-widgets @ file:///home/conda/feedstock_root/build_artifacts/jupyterlab_widgets_1662157840858/work
-keras==2.10.0
-Keras-Preprocessing==1.1.2
+Keras==2.4.3
 kiwisolver @ file:///Users/runner/miniforge3/conda-bld/kiwisolver_1666805848360/work
 libclang==14.0.6
 Markdown==3.4.1
