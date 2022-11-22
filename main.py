@@ -1,7 +1,6 @@
 # Import libraries 
 from PIL import Image 
 import numpy as np
-import keras
 from keras.models import load_model , model_from_json
 import cv2
 
