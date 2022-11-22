@@ -1,8 +1,6 @@
 # Import libraries 
-from PIL import Image
-from matplotlib import pyplot as plt  
+from PIL import Image 
 import numpy as np
-import face_recognition
 import keras
 from keras.models import load_model , model_from_json
 import cv2
@@ -12,16 +10,27 @@ import streamlit as st
 
 
 def do_face_detection(img):
-    face_locations = face_recognition.face_locations(img)
-    return face_locations
-    print("Total number of faces:{}".format(len(face_locations)))
-    # face locations has details for edges for faces
+    # Load the cascade
+    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+    # Convert into grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Detect faces
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
     
-    # top, right, bottom, left = face_locations[0]
-    # face_image1 = img[top:bottom, left:right]
+    return faces
+    # face_locations = face_recognition.face_locations(img)
+    # return face_locations
+
+    # print("Total number of faces:{}".format(len(face_locations)))
+    # # face locations has details for edges for faces
     
-    # cv2.imshow('face-1',face_image1)
-    # cv2.waitKey()
+    
+    # # top, right, bottom, left = face_locations[0]
+    # # face_image1 = img[top:bottom, left:right]
+    
+    # # cv2.imshow('face-1',face_image1)
+    # # cv2.waitKey()
     
 # Face emotion detection is slow in this model
 def do_emotion_recognition(img, face_locations, emotion_model):
@@ -32,8 +41,8 @@ def do_emotion_recognition(img, face_locations, emotion_model):
     # Loop through all the detecte faces 
     for i in range(len(face_locations)):
         #Crop face part for emotion detection 
-        top,right , bottom , left = face_locations[i]
-        face = img[top:bottom, left:right]
+        x , y , w , h = face_locations[i]
+        face = img[y:y+h, x:x+w]
         
         ## Resize the image 
         face = cv2.resize(face, (48,48))
@@ -45,7 +54,7 @@ def do_emotion_recognition(img, face_locations, emotion_model):
         maxindex = int(np.argmax(emotion_prediction))
        
         # write user emotion on image 
-        cv2.putText(img, emotion_dict[maxindex], (left+5, top-20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(img, emotion_dict[maxindex], (x+5, y-20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
        
         
         
@@ -71,8 +80,9 @@ def do_age_gender_recognition(img , face_locations):
     # Loop through all the detecte faces 
     for i in range(len(face_locations)):
         #Crop face part for emotion detection 
-        top,right , bottom , left = face_locations[i]
-        face = img[top:bottom, left:right]
+        x , y , w , h = face_locations[i]
+        face = img[y:y+h, x:x+w]
+
         
         blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
         
@@ -88,16 +98,16 @@ def do_age_gender_recognition(img , face_locations):
         
         ageSex= age+" "+gender
         
-        cv2.putText(img, ageSex, (left+5, top+25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.putText(img, ageSex, (x+5, y+25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
         
     
     return img
             
 def draw_borders_face(img , detections):
     for detection in detections:
-        top, right, bottom, left = detection
-        start = (left,top)
-        end = (right,bottom)
+        x , y , w , h = detection
+        start = (x,y)
+        end = (x+w , y+h)
         # Blue color in BGR
         color = (255, 0, 0)
         # Line thickness of 2 px
@@ -110,7 +120,11 @@ def main():
     # image = Image.open("./test_images/leo.jpg")
     # image_array = np.array(image)
     # face_locations = do_face_detection(image_array)
+    # print(face_locations)
     # image_array = draw_borders_face(image_array , face_locations)
+    # cv2.imshow("faces",image_array)
+    # cv2.waitKey()
+    
     # do_age_gender_recognition(image_array , face_locations)
 
     # do_emotion_recognition(image_array, face_locations)
