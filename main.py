@@ -4,34 +4,63 @@ import numpy as np
 import keras
 from keras.models import load_model , model_from_json
 import cv2
+import requests
+import io
+import base64
 
 # Streamlit 
 import streamlit as st 
 
 
-def do_face_detection(img):
-    # Load the cascade
-    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+def do_face_detection(image):
+    faceLocations =[]
+    http_url = 'https://api-us.faceplusplus.com/facepp/v3/detect'
+    key = "LXCYl-Fuc_erkrCY_iQfhYEYfttcXn4P"
+    secret = "WY6zwvR8wZ42wX621cGvIIo-JC8YN5NS"
+    
+    #conver the numpy array into an Image type object
+    h , w , c = image.shape
+    image = np.reshape(image,(h,w,c))
+    image = Image.fromarray(image, 'RGB')
 
-    # Convert into grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Detect faces
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    #convert image to bytes as api requests are in that format
+    buf = io.BytesIO()
+    image.save(buf,format = 'JPEG')
+    byte_im = base64.b64encode(buf.getvalue())
     
-    return faces
-    # face_locations = face_recognition.face_locations(img)
-    # return face_locations
+    payload = {
+                'api_key': key, 
+                'api_secret': secret, 
+                'image_base64':byte_im,
+                }
+    
+    try:
+        # send request to API and get detection information
+        res = requests.post(http_url, data=payload)
+        json_response = res.json()
 
-    # print("Total number of faces:{}".format(len(face_locations)))
-    # # face locations has details for edges for faces
-    
-    
-    # # top, right, bottom, left = face_locations[0]
-    # # face_image1 = img[top:bottom, left:right]
-    
-    # # cv2.imshow('face-1',face_image1)
-    # # cv2.waitKey()
-    
+        
+        # get face info and draw bounding box 
+        # st.write(json_response["faces"])
+        for faces in json_response["faces"]:
+            dim =[]
+            # get coordinate, height and width of fece detection
+            x , y , w , h = faces["face_rectangle"].values()
+            dim.append(y)
+            dim.append(x)
+            dim.append(h)
+            dim.append(w)
+            faceLocations.append(dim)
+
+    except Exception as e:
+        print('Error:')
+        print(e) 
+    return faceLocations
+
+# FORMAT 
+# [[ 65  96 194 194]
+#  [343  77 214 214]]
+ 
 # Face emotion detection is slow in this model
 def do_emotion_recognition(img, face_locations, emotion_model):
     emotion_dict= {0: "Angry", 1: "Disgusted", 2: "Fearful", 3: "Happy", 4: "Neutral", 5: "Sad", 6: "Surprised"}
@@ -137,7 +166,7 @@ def main():
     constConfidence = 0.4
     
     uploaded_video = st.file_uploader("Choose video", type=["mp4", "mov"])
-    frame_skip = 10 # display every 300 frames
+    frame_skip = 30 # display every 300 frames
     
     # face-emotion detection model --------------------------------
     json_file = open('model/emotion_model.json', 'r')
@@ -176,20 +205,20 @@ def main():
                         face_locations = do_face_detection(frame)
                         # draw borders around detected faces 
                         frame = draw_borders_face(frame , face_locations)
-
+                        
                         # show emotion for person detected face
                         frame = do_emotion_recognition(frame , face_locations , emotion_model)
                         
                         frame = do_age_gender_recognition(frame , face_locations)
                         
-                        height = frame.shape[0]
-                        width = frame.shape[1]
+                        # height = frame.shape[0]
+                        # width = frame.shape[1]
                     
-                        #Count the number of faces present
-                        faces = face_locations.__len__()
-                        # dimention = frame.shape
-                        # print(dimention)
-                        # cv2.putText(frame, faces, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                        # #Count the number of faces present
+                        # faces = face_locations.__len__()
+                        # # dimention = frame.shape
+                        # # print(dimention)
+                        # # cv2.putText(frame, faces, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
                         
 
                         # pre-processing for displaying
