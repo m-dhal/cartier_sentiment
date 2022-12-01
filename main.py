@@ -14,6 +14,8 @@ import streamlit as st
 
 def do_face_detection(image):
     faceLocations =[]
+    genderList=[]
+    ageList=[]
     http_url = 'https://api-us.faceplusplus.com/facepp/v3/detect'
     key = "LXCYl-Fuc_erkrCY_iQfhYEYfttcXn4P"
     secret = "WY6zwvR8wZ42wX621cGvIIo-JC8YN5NS"
@@ -32,12 +34,14 @@ def do_face_detection(image):
                 'api_key': key, 
                 'api_secret': secret, 
                 'image_base64':byte_im,
+                'return_attributes':'gender,age'
                 }
     
     try:
         # send request to API and get detection information
         res = requests.post(http_url, data=payload)
         json_response = res.json()
+        print(json_response)
 
         
         # get face info and draw bounding box 
@@ -46,16 +50,20 @@ def do_face_detection(image):
             dim =[]
             # get coordinate, height and width of fece detection
             x , y , w , h = faces["face_rectangle"].values()
+            gender, age = faces["attributes"].values()
+            gender , age = gender['value'], age['value']
             dim.append(y)
             dim.append(x)
             dim.append(h)
             dim.append(w)
             faceLocations.append(dim)
+            ageList.append(age)
+            genderList.append(gender)
 
     except Exception as e:
         print('Error:')
         print(e) 
-    return faceLocations
+    return faceLocations , ageList , genderList
 
 # FORMAT 
 # [[ 65  96 194 194]
@@ -132,32 +140,23 @@ def do_age_gender_recognition(img , face_locations):
     
     return img
             
-def draw_borders_face(img , detections):
-    for detection in detections:
-        x , y , w , h = detection
+def draw_borders_face(img , detections ,ageList , genderList):
+    for i in range (len(detections)):
+    # for detection in detections:
+        age = str(ageList[i])
+        gender= str(genderList[i])
+        x , y , w , h = detections[i]
         start = (x,y)
         end = (x+w , y+h)
         # Blue color in BGR
         color = (255, 0, 0)
         # Line thickness of 2 px
         thickness = 2
+        cv2.putText(img, age+','+gender, (x,y+h+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
         img = cv2.rectangle(img, start , end , color, thickness)
     return img
     
 def main():
-    # # perform face detection and count the number of faces
-    # image = Image.open("./test_images/leo.jpg")
-    # image_array = np.array(image)
-    # face_locations = do_face_detection(image_array)
-    # print(face_locations)
-    # image_array = draw_borders_face(image_array , face_locations)
-    # cv2.imshow("faces",image_array)
-    # cv2.waitKey()
-    
-    # do_age_gender_recognition(image_array , face_locations)
-
-    # do_emotion_recognition(image_array, face_locations)
-    
     
     # Streamlit start page
     st.title("Open CV Demo App")
@@ -201,26 +200,14 @@ def main():
                 success, frame = vidcap.read() # get next frame from video
                 if cur_frame % frame_skip == 0: # only analyze every n=300 frames
                     try:
-                        # perform face detection and return the detections array 
-                        face_locations = do_face_detection(frame)
+                        # perform face detection and return the detections array with age and gender
+                        face_locations , ageList , genderList = do_face_detection(frame)
                         # draw borders around detected faces 
-                        frame = draw_borders_face(frame , face_locations)
+                        frame = draw_borders_face(frame , face_locations,ageList , genderList)
                         
                         # show emotion for person detected face
                         frame = do_emotion_recognition(frame , face_locations , emotion_model)
                         
-                        frame = do_age_gender_recognition(frame , face_locations)
-                        
-                        # height = frame.shape[0]
-                        # width = frame.shape[1]
-                    
-                        # #Count the number of faces present
-                        # faces = face_locations.__len__()
-                        # # dimention = frame.shape
-                        # # print(dimention)
-                        # # cv2.putText(frame, faces, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                        
-
                         # pre-processing for displaying
                         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         print('frame: {}'.format(cur_frame)) 
